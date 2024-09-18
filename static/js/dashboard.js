@@ -1,21 +1,34 @@
-// Check if date-fns is available, if not, load it dynamically
-if (typeof dateFns === 'undefined') {
-    console.log('date-fns library not found, loading dynamically');
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/date-fns/2.29.3/date-fns.min.js';
-    script.onload = initializeDashboard;
-    document.head.appendChild(script);
-} else {
-    console.log('date-fns library found');
-    initializeDashboard();
+function loadDateFns() {
+    return new Promise((resolve, reject) => {
+        if (typeof dateFns === 'undefined') {
+            console.log('date-fns library not found, loading dynamically');
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/date-fns/2.29.3/date-fns.min.js';
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error('Failed to load date-fns'));
+            document.head.appendChild(script);
+        } else {
+            console.log('date-fns library found');
+            resolve();
+        }
+    });
 }
 
-function initializeDashboard() {
-    let svg, xScale, yScale;
-    const margin = { top: 20, right: 20, bottom: 30, left: 40 };
-    const width = 960 - margin.left - margin.right;
-    const height = 500 - margin.top - margin.bottom;
+loadDateFns()
+    .then(() => {
+        console.log('date-fns loaded, initializing dashboard');
+        initializeDashboard();
+    })
+    .catch(error => {
+        console.error('Error loading date-fns:', error);
+    });
 
+let svg, xScale, yScale;
+const margin = { top: 20, right: 20, bottom: 30, left: 40 };
+const width = 960 - margin.left - margin.right;
+const height = 500 - margin.top - margin.bottom;
+
+function initializeDashboard() {
     function initializeSVG() {
         console.log("Initializing SVG");
         svg = d3.select("#timeline")
@@ -98,91 +111,6 @@ function initializeDashboard() {
         return true;
     }
 
-    function renderTimeline(data) {
-        console.log("Rendering timeline with data:", data);
-
-        svg.selectAll("*").remove();
-        if (!createScales(data)) {
-            console.error("Failed to create scales. Aborting render.");
-            return;
-        }
-
-        // Render epics
-        if (data.epics) renderItems(data.epics, "epic");
-
-        // Render features
-        if (data.features) renderItems(data.features, "feature");
-
-        // Render sprints
-        if (data.sprints) renderItems(data.sprints, "sprint");
-
-        // Add x-axis
-        svg.append("g")
-            .attr("transform", `translate(0,${height})`)
-            .call(d3.axisBottom(xScale));
-
-        // Add y-axis
-        svg.append("g")
-            .call(d3.axisLeft(yScale));
-    }
-
-    function renderItems(items, className) {
-        console.log(`Rendering ${className}s:`, items);
-        const itemGroups = svg.selectAll(`.${className}`)
-            .data(items)
-            .enter()
-            .append("g")
-            .attr("class", className);
-
-        itemGroups.each(function(d) {
-            const group = d3.select(this);
-            console.log(`Processing ${className}:`, d.name, "Start:", d.startDate, "End:", d.endDate);
-            
-            if (!d.startDate || !d.endDate) {
-                console.error(`Missing date for ${className}:`, d.name, "Start:", d.startDate, "End:", d.endDate);
-                return;
-            }
-
-            let startDate, endDate;
-            try {
-                startDate = dateFns.parseISO(d.startDate);
-                endDate = dateFns.parseISO(d.endDate);
-            } catch (error) {
-                console.error(`Error parsing dates for ${className}:`, d.name, error);
-                return;
-            }
-            
-            console.log(`Parsed dates - Start: ${startDate}, End: ${endDate}`);
-            
-            if (!dateFns.isValid(startDate) || !dateFns.isValid(endDate)) {
-                console.error(`Invalid date for ${className}:`, d.name, "Start:", d.startDate, "End:", d.endDate);
-                return;
-            }
-
-            console.log(`Rendering ${className}:`, d.name, "Start:", dateFns.format(startDate, 'yyyy-MM-dd'), "End:", dateFns.format(endDate, 'yyyy-MM-dd'));
-
-            const x = xScale(startDate);
-            const y = yScale(d.name);
-            const width = xScale(endDate) - xScale(startDate);
-            const height = yScale.bandwidth();
-
-            console.log(`Calculated values - x: ${x}, y: ${y}, width: ${width}, height: ${height}`);
-
-            const rect = group.append("rect");
-            setAttributeSafe(rect.node(), "x", x);
-            setAttributeSafe(rect.node(), "y", y);
-            setAttributeSafe(rect.node(), "width", width);
-            setAttributeSafe(rect.node(), "height", height);
-            rect.attr("class", className);
-
-            const text = group.append("text");
-            setAttributeSafe(text.node(), "x", x + 5);
-            setAttributeSafe(text.node(), "y", y + height / 2);
-            text.attr("dy", ".35em")
-                .text(d.name);
-        });
-    }
-
     function fetchReleasePlan() {
         console.log("Fetching release plan data");
         fetch('/api/release_plan')
@@ -204,7 +132,91 @@ function initializeDashboard() {
     fetchReleasePlan();
 }
 
-// Add this function to handle the filter application
+function renderTimeline(data) {
+    console.log("Rendering timeline with data:", data);
+
+    svg.selectAll("*").remove();
+    if (!createScales(data)) {
+        console.error("Failed to create scales. Aborting render.");
+        return;
+    }
+
+    // Render epics
+    if (data.epics) renderItems(data.epics, "epic");
+
+    // Render features
+    if (data.features) renderItems(data.features, "feature");
+
+    // Render sprints
+    if (data.sprints) renderItems(data.sprints, "sprint");
+
+    // Add x-axis
+    svg.append("g")
+        .attr("transform", `translate(0,${height})`)
+        .call(d3.axisBottom(xScale));
+
+    // Add y-axis
+    svg.append("g")
+        .call(d3.axisLeft(yScale));
+}
+
+function renderItems(items, className) {
+    console.log(`Rendering ${className}s:`, items);
+    const itemGroups = svg.selectAll(`.${className}`)
+        .data(items)
+        .enter()
+        .append("g")
+        .attr("class", className);
+
+    itemGroups.each(function(d) {
+        const group = d3.select(this);
+        console.log(`Processing ${className}:`, d.name, "Start:", d.startDate, "End:", d.endDate);
+        
+        if (!d.startDate || !d.endDate) {
+            console.error(`Missing date for ${className}:`, d.name, "Start:", d.startDate, "End:", d.endDate);
+            return;
+        }
+
+        let startDate, endDate;
+        try {
+            startDate = dateFns.parseISO(d.startDate);
+            endDate = dateFns.parseISO(d.endDate);
+        } catch (error) {
+            console.error(`Error parsing dates for ${className}:`, d.name, error);
+            return;
+        }
+        
+        console.log(`Parsed dates - Start: ${startDate}, End: ${endDate}`);
+        
+        if (!dateFns.isValid(startDate) || !dateFns.isValid(endDate)) {
+            console.error(`Invalid date for ${className}:`, d.name, "Start:", d.startDate, "End:", d.endDate);
+            return;
+        }
+
+        console.log(`Rendering ${className}:`, d.name, "Start:", dateFns.format(startDate, 'yyyy-MM-dd'), "End:", dateFns.format(endDate, 'yyyy-MM-dd'));
+
+        const x = xScale(startDate);
+        const y = yScale(d.name);
+        const width = xScale(endDate) - xScale(startDate);
+        const height = yScale.bandwidth();
+
+        console.log(`Calculated values - x: ${x}, y: ${y}, width: ${width}, height: ${height}`);
+
+        const rect = group.append("rect");
+        setAttributeSafe(rect.node(), "x", x);
+        setAttributeSafe(rect.node(), "y", y);
+        setAttributeSafe(rect.node(), "width", width);
+        setAttributeSafe(rect.node(), "height", height);
+        rect.attr("class", className);
+
+        const text = group.append("text");
+        setAttributeSafe(text.node(), "x", x + 5);
+        setAttributeSafe(text.node(), "y", y + height / 2);
+        text.attr("dy", ".35em")
+            .text(d.name);
+    });
+}
+
 function applyFilters() {
     const viewType = document.getElementById('view-type').value;
     const searchFilter = document.getElementById('search-filter').value;
@@ -224,7 +236,11 @@ function applyFilters() {
     .then(response => response.json())
     .then(data => {
         // Update the timeline with the filtered data
-        renderTimeline(data);
+        if (typeof renderTimeline === 'function') {
+            renderTimeline(data);
+        } else {
+            console.error('renderTimeline function is not defined');
+        }
     })
     .catch(error => {
         console.error('Error applying filters:', error);
