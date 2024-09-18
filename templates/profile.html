@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - Release Plan Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Profile</h1>
+        <form method="POST">
+            <div>
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" value="{{ current_user.username }}" required>
+            </div>
+            <div>
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" value="{{ current_user.email }}" required>
+            </div>
+            <div>
+                <label for="set_admin">
+                    <input type="checkbox" id="set_admin" name="set_admin" {% if current_user.role == 'admin' %}checked{% endif %}>
+                    Set as Admin
+                </label>
+            </div>
+            <button type="submit">Update Profile</button>
+        </form>
+        <p><a href="{{ url_for('index') }}">Back to Dashboard</a></p>
+    </div>
+</body>
+</html>

@@ -94,6 +94,19 @@ def register():
                 flash('An error occurred during registration. Please try again.')
     return render_template('register.html')
 
+@app.route('/profile', methods=['GET', 'POST'])
+@login_required
+def profile():
+    if request.method == 'POST':
+        current_user.username = request.form['username']
+        current_user.email = request.form['email']
+        if 'set_admin' in request.form:
+            current_user.set_as_admin()
+        db.session.commit()
+        flash('Profile updated successfully')
+        return redirect(url_for('profile'))
+    return render_template('profile.html')
+
 @app.route('/api/release_plan')
 @login_required
 def get_release_plan():
