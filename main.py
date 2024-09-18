@@ -101,7 +101,9 @@ def profile():
         current_user.username = request.form['username']
         current_user.email = request.form['email']
         if 'set_admin' in request.form:
-            current_user.set_as_admin()
+            current_user.role = 'admin'
+        else:
+            current_user.role = 'user'
         db.session.commit()
         flash('Profile updated successfully')
         return redirect(url_for('profile'))
