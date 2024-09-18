@@ -27,7 +27,26 @@
             </nav>
         </header>
         <div id="timeline"></div>
+        {% if current_user.role == 'admin' %}
+            <div class="admin-section">
+                <h2>Admin Features</h2>
+                <button onclick="testConnection()">Test Azure DevOps Connection</button>
+                <div id="connection-result"></div>
+            </div>
+        {% endif %}
     </div>
     <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+    <script>
+    function testConnection() {
+        fetch('/api/test_connection')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('connection-result').innerText = data.message;
+            })
+            .catch(error => {
+                document.getElementById('connection-result').innerText = 'Error: ' + error.message;
+            });
+    }
+    </script>
 </body>
 </html>
