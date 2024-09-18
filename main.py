@@ -1,13 +1,25 @@
 import logging
 from logging.handlers import RotatingFileHandler
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, request, redirect, url_for, flash
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from azure_devops_client import AzureDevOpsClient
 from database import Database
+from models import User, init_db
 import config
 import json
 import traceback
+from functools import wraps
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = 'your-secret-key'  # Change this to a secure random key
+app.config['SQLALCHEMY_DATABASE_URI'] = f"postgresql://{config.PGUSER}:{config.PGPASSWORD}@{config.PGHOST}:{config.PGPORT}/{config.PGDATABASE}"
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+init_db(app)
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
 
 logging.basicConfig(level=logging.DEBUG)
 handler = RotatingFileHandler('app.log', maxBytes=10000, backupCount=1)
@@ -21,23 +33,66 @@ azure_client = AzureDevOpsClient(
 )
 db = Database()
 
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or current_user.role != 'admin':
+            flash('You need to be an admin to access this page.', 'error')
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
 @app.route('/')
+@login_required
 def index():
     return render_template('index.html')
 
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        user = User.query.filter_by(username=username).first()
+        if user and user.check_password(password):
+            login_user(user)
+            return redirect(url_for('index'))
+        flash('Invalid username or password')
+    return render_template('login.html')
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('index'))
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form['username']
+        email = request.form['email']
+        password = request.form['password']
+        existing_user = User.query.filter_by(username=username).first()
+        if existing_user:
+            flash('Username already exists')
+        else:
+            new_user = User(username=username, email=email)
+            new_user.set_password(password)
+            db.session.add(new_user)
+            db.session.commit()
+            flash('Registration successful')
+            return redirect(url_for('login'))
+    return render_template('register.html')
+
 @app.route('/api/release_plan')
+@login_required
 def get_release_plan():
     try:
-        # Try to fetch data from the cache first
         app.logger.debug("Attempting to fetch data from cache")
-        # cached_data = db.get_cached_data()
-        # if cached_data:
-        #     app.logger.debug(f"Cached data structure: {json.dumps(cached_data, indent=2)}")
-        #     return jsonify(cached_data)
-
-        # If not in cache, fetch from Azure DevOps API
         app.logger.debug("Cache miss. Fetching data from Azure DevOps API")
-
         app.logger.debug("Starting API calls to Azure DevOps")
         app.logger.debug(f"Azure DevOps Organization: {config.AZURE_DEVOPS_ORG}")
         app.logger.debug(f"Azure DevOps Project: {config.AZURE_DEVOPS_PROJECT}")
@@ -64,7 +119,6 @@ def get_release_plan():
             'sprints': sprints
         }
 
-        # Cache the fetched data
         app.logger.debug("Caching fetched data")
         db.cache_data(release_plan)
 
@@ -76,6 +130,8 @@ def get_release_plan():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/test_connection')
+@login_required
+@admin_required
 def test_azure_devops_connection():
     app.logger.debug("Testing Azure DevOps connection")
     connection_successful, message = azure_client.test_connection()
