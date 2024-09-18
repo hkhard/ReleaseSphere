@@ -26,7 +26,21 @@
                 {% endif %}
             </nav>
         </header>
+        
+        <div class="filters">
+            <h2>Customize View</h2>
+            <select id="view-type">
+                <option value="all">All</option>
+                <option value="epics">Epics</option>
+                <option value="features">Features</option>
+                <option value="sprints">Sprints</option>
+            </select>
+            <input type="text" id="search-filter" placeholder="Search...">
+            <button onclick="applyFilters()">Apply Filters</button>
+        </div>
+
         <div id="timeline"></div>
+        
         {% if current_user.role == 'admin' %}
             <div class="admin-section">
                 <h2>Admin Features</h2>
@@ -46,6 +60,32 @@
             .catch(error => {
                 document.getElementById('connection-result').innerText = 'Error: ' + error.message;
             });
+    }
+
+    function applyFilters() {
+        const viewType = document.getElementById('view-type').value;
+        const searchFilter = document.getElementById('search-filter').value;
+
+        fetch('/api/customize_view', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                view_type: viewType,
+                filters: {
+                    name: searchFilter
+                }
+            }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Update the timeline with the filtered data
+            renderTimeline(data);
+        })
+        .catch(error => {
+            console.error('Error applying filters:', error);
+        });
     }
     </script>
 </body>

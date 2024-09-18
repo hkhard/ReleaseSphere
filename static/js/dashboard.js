@@ -36,12 +36,18 @@ function initializeDashboard() {
 
     function createScales(data) {
         console.log("Creating scales with data:", data);
-        if (!data.epics || !data.features || !data.sprints) {
-            console.error("Invalid data structure. Missing epics, features, or sprints.");
+        if (!data.epics && !data.features && !data.sprints) {
+            console.error("Invalid data structure. Missing epics, features, and sprints.");
             return false;
         }
 
-        const allDates = data.epics.concat(data.features).concat(data.sprints)
+        const allItems = [
+            ...(data.epics || []),
+            ...(data.features || []),
+            ...(data.sprints || [])
+        ];
+
+        const allDates = allItems
             .flatMap(item => [item.startDate, item.endDate])
             .filter(date => date != null && date !== "");
         
@@ -85,7 +91,7 @@ function initializeDashboard() {
             .range([0, width]);
 
         yScale = d3.scaleBand()
-            .domain(data.epics.map(d => d.name).concat(data.features.map(d => d.name)).concat(data.sprints.map(d => d.name)))
+            .domain(allItems.map(d => d.name))
             .range([0, height])
             .padding(0.1);
 
@@ -102,13 +108,13 @@ function initializeDashboard() {
         }
 
         // Render epics
-        renderItems(data.epics, "epic");
+        if (data.epics) renderItems(data.epics, "epic");
 
         // Render features
-        renderItems(data.features, "feature");
+        if (data.features) renderItems(data.features, "feature");
 
         // Render sprints
-        renderItems(data.sprints, "sprint");
+        if (data.sprints) renderItems(data.sprints, "sprint");
 
         // Add x-axis
         svg.append("g")
@@ -183,7 +189,7 @@ function initializeDashboard() {
             .then(response => response.json())
             .then(data => {
                 console.log("Fetched release plan data:", data);
-                if (!data || !data.epics || !data.features || !data.sprints) {
+                if (!data || (!data.epics && !data.features && !data.sprints)) {
                     console.error("Invalid or empty data received from the server");
                     return;
                 }
@@ -196,4 +202,31 @@ function initializeDashboard() {
 
     initializeSVG();
     fetchReleasePlan();
+}
+
+// Add this function to handle the filter application
+function applyFilters() {
+    const viewType = document.getElementById('view-type').value;
+    const searchFilter = document.getElementById('search-filter').value;
+
+    fetch('/api/customize_view', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            view_type: viewType,
+            filters: {
+                name: searchFilter
+            }
+        }),
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Update the timeline with the filtered data
+        renderTimeline(data);
+    })
+    .catch(error => {
+        console.error('Error applying filters:', error);
+    });
 }

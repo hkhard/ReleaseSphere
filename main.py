@@ -164,6 +164,41 @@ def test_azure_devops_connection():
         app.logger.error(f"Failed to connect to Azure DevOps: {message}")
         return jsonify({"status": "error", "message": message}), 500
 
+@app.route('/api/customize_view', methods=['POST'])
+@login_required
+def customize_view():
+    data = request.json
+    view_type = data.get('view_type', 'all')
+    filters = data.get('filters', {})
+    
+    try:
+        release_plan = json.loads(db_connection.get_cached_data())
+        
+        if view_type == 'epics':
+            filtered_data = filter_items(release_plan['epics'], filters)
+        elif view_type == 'features':
+            filtered_data = filter_items(release_plan['features'], filters)
+        elif view_type == 'sprints':
+            filtered_data = filter_items(release_plan['sprints'], filters)
+        else:
+            filtered_data = {
+                'epics': filter_items(release_plan['epics'], filters),
+                'features': filter_items(release_plan['features'], filters),
+                'sprints': filter_items(release_plan['sprints'], filters)
+            }
+        
+        return jsonify(filtered_data)
+    except Exception as e:
+        error_message = f"Error in customize_view: {str(e)}\n{traceback.format_exc()}"
+        app.logger.error(error_message)
+        return jsonify({'error': str(e)}), 500
+
+def filter_items(items, filters):
+    filtered_items = items
+    for key, value in filters.items():
+        filtered_items = [item for item in filtered_items if item.get(key) == value]
+    return filtered_items
+
 if __name__ != '__main__':
     gunicorn_logger = logging.getLogger('gunicorn.error')
     app.logger.handlers = gunicorn_logger.handlers
