@@ -220,6 +220,9 @@ function renderItems(items, className) {
 function applyFilters() {
     const viewType = document.getElementById('view-type').value;
     const searchFilter = document.getElementById('search-filter').value;
+    const startDateFilter = document.getElementById('start-date-filter').value;
+    const endDateFilter = document.getElementById('end-date-filter').value;
+    const statusFilter = document.getElementById('status-filter').value;
 
     fetch('/api/customize_view', {
         method: 'POST',
@@ -229,13 +232,15 @@ function applyFilters() {
         body: JSON.stringify({
             view_type: viewType,
             filters: {
-                name: searchFilter
+                name: searchFilter,
+                start_date: startDateFilter,
+                end_date: endDateFilter,
+                status: statusFilter
             }
         }),
     })
     .then(response => response.json())
     .then(data => {
-        // Update the timeline with the filtered data
         if (typeof renderTimeline === 'function') {
             renderTimeline(data);
         } else {

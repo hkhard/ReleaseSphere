@@ -36,6 +36,14 @@
                 <option value="sprints">Sprints</option>
             </select>
             <input type="text" id="search-filter" placeholder="Search...">
+            <input type="date" id="start-date-filter" placeholder="Start Date">
+            <input type="date" id="end-date-filter" placeholder="End Date">
+            <select id="status-filter">
+                <option value="">All Statuses</option>
+                <option value="not-started">Not Started</option>
+                <option value="in-progress">In Progress</option>
+                <option value="completed">Completed</option>
+            </select>
             <button onclick="applyFilters()">Apply Filters</button>
         </div>
 
@@ -50,43 +58,5 @@
         {% endif %}
     </div>
     <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
-    <script>
-    function testConnection() {
-        fetch('/api/test_connection')
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('connection-result').innerText = data.message;
-            })
-            .catch(error => {
-                document.getElementById('connection-result').innerText = 'Error: ' + error.message;
-            });
-    }
-
-    function applyFilters() {
-        const viewType = document.getElementById('view-type').value;
-        const searchFilter = document.getElementById('search-filter').value;
-
-        fetch('/api/customize_view', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                view_type: viewType,
-                filters: {
-                    name: searchFilter
-                }
-            }),
-        })
-        .then(response => response.json())
-        .then(data => {
-            // Update the timeline with the filtered data
-            renderTimeline(data);
-        })
-        .catch(error => {
-            console.error('Error applying filters:', error);
-        });
-    }
-    </script>
 </body>
 </html>

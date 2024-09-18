@@ -10,6 +10,7 @@ import config
 import json
 import traceback
 from functools import wraps
+from datetime import datetime
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key'  # Change this to a secure random key
@@ -114,6 +115,11 @@ def profile():
 def get_release_plan():
     try:
         app.logger.debug("Attempting to fetch data from cache")
+        cached_data = db_connection.get_cached_data()
+        if cached_data:
+            app.logger.debug("Data found in cache")
+            return jsonify(json.loads(cached_data))
+
         app.logger.debug("Cache miss. Fetching data from Azure DevOps API")
         app.logger.debug("Starting API calls to Azure DevOps")
         app.logger.debug(f"Azure DevOps Organization: {config.AZURE_DEVOPS_ORG}")
@@ -142,7 +148,7 @@ def get_release_plan():
         }
 
         app.logger.debug("Caching fetched data")
-        db_connection.cache_data(release_plan)
+        db_connection.cache_data(json.dumps(release_plan))
 
         app.logger.debug(f"API data structure: {json.dumps(release_plan, indent=2)}")
         return jsonify(release_plan)
@@ -196,7 +202,16 @@ def customize_view():
 def filter_items(items, filters):
     filtered_items = items
     for key, value in filters.items():
-        filtered_items = [item for item in filtered_items if item.get(key) == value]
+        if key == 'name' and value:
+            filtered_items = [item for item in filtered_items if value.lower() in item['name'].lower()]
+        elif key == 'start_date' and value:
+            start_date = datetime.strptime(value, '%Y-%m-%d')
+            filtered_items = [item for item in filtered_items if datetime.strptime(item['startDate'], '%Y-%m-%d') >= start_date]
+        elif key == 'end_date' and value:
+            end_date = datetime.strptime(value, '%Y-%m-%d')
+            filtered_items = [item for item in filtered_items if datetime.strptime(item['endDate'], '%Y-%m-%d') <= end_date]
+        elif key == 'status' and value:
+            filtered_items = [item for item in filtered_items if item.get('status', '').lower() == value.lower()]
     return filtered_items
 
 if __name__ != '__main__':
