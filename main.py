@@ -79,12 +79,17 @@ def register():
         if existing_user:
             flash('Username already exists')
         else:
-            new_user = User(username=username, email=email)
-            new_user.set_password(password)
-            db.session.add(new_user)
-            db.session.commit()
-            flash('Registration successful')
-            return redirect(url_for('login'))
+            try:
+                new_user = User(username=username, email=email)
+                new_user.set_password(password)
+                db.session.add(new_user)
+                db.session.commit()
+                flash('Registration successful')
+                return redirect(url_for('login'))
+            except Exception as e:
+                db.session.rollback()
+                app.logger.error(f"Error during registration: {str(e)}")
+                flash('An error occurred during registration. Please try again.')
     return render_template('register.html')
 
 @app.route('/api/release_plan')
