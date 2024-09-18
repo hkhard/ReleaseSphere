@@ -4,7 +4,7 @@ from flask import Flask, render_template, jsonify, request, redirect, url_for, f
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from azure_devops_client import AzureDevOpsClient
 from database import Database
-from models import User, init_db
+from models import User, init_db, db
 import config
 import json
 import traceback
@@ -31,7 +31,7 @@ azure_client = AzureDevOpsClient(
     collection=config.AZURE_DEVOPS_ORG,
     personal_access_token=config.AZURE_DEVOPS_PAT
 )
-db = Database()
+db_connection = Database()
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -120,7 +120,7 @@ def get_release_plan():
         }
 
         app.logger.debug("Caching fetched data")
-        db.cache_data(release_plan)
+        db_connection.cache_data(release_plan)
 
         app.logger.debug(f"API data structure: {json.dumps(release_plan, indent=2)}")
         return jsonify(release_plan)
