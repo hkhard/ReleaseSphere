@@ -101,3 +101,8 @@ sqlalchemy.exc.DataError: (psycopg2.errors.StringDataRightTruncation) value too 
 [SQL: INSERT INTO "user" (username, email, password_hash, role) VALUES (%(username)s, %(email)s, %(password_hash)s, %(role)s) RETURNING "user".id]
 [parameters: {'username': 'hkhard', 'email': 'hans.hard@gmail.com', 'password_hash': 'scrypt:32768:8:1$AnuViDeWsULuGdgn$b6c93a170c509461c8fed1d55e0815db4cb857883267a0c23db54e92522b4035aaa7d7c2bece82de681c723a7816f29e87c3d2af71e613e86b5945088df2d58e', 'role': 'user'}]
 (Background on this error at: https://sqlalche.me/e/20/9h9h)
+Error during registration: (psycopg2.errors.StringDataRightTruncation) value too long for type character varying(128)
+
+[SQL: INSERT INTO "user" (username, email, password_hash, role) VALUES (%(username)s, %(email)s, %(password_hash)s, %(role)s) RETURNING "user".id]
+[parameters: {'username': 'hkhard', 'email': 'hans.hard@gmail.com', 'password_hash': 'scrypt:32768:8:1$Ww2XI6az7JYDHXmx$f2dfbaba12b32da3a684e47c4c4aa69503401d19e25f3d23b47ad50505631698c54ac97d9fc31a1f320232d6ec3daf546d03ce46cb62e5146458576b6c67b2d2', 'role': 'user'}]
+(Background on this error at: https://sqlalche.me/e/20/9h9h)

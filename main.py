@@ -2,6 +2,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 from flask import Flask, render_template, jsonify, request, redirect, url_for, flash
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from flask_migrate import Migrate
 from azure_devops_client import AzureDevOpsClient
 from database import Database
 from models import User, init_db, db
@@ -16,6 +17,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = f"postgresql://{config.PGUSER}:{config.P
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 init_db(app)
+migrate = Migrate(app, db)
 
 login_manager = LoginManager()
 login_manager.init_app(app)
