@@ -28,7 +28,7 @@ agentRequireRestartOnSave = false
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python main.py"
+args = "export FLASK_APP=main.py && flask run --host=0.0.0.0 --port=5000"
 waitForPort = 5000
 
 [[workflows.workflow]]
@@ -44,7 +44,7 @@ args = "npm run dev"
 waitForPort = 3000
 
 [deployment]
-run = ["sh", "-c", "python main.py"]
+run = ["sh", "-c", "export FLASK_APP=main.py && flask run --host=0.0.0.0 --port=5000"]
 
 [[ports]]
 localPort = 5000
